@@ -1,18 +1,24 @@
 package io.scalac.amqp.impl
 
 import java.io.IOException
+import java.util.concurrent.ExecutorService
 
 import com.rabbitmq.client.{Address, AlreadyClosedException, Channel}
 import io.scalac.amqp._
 import org.reactivestreams.{Subscriber, Subscription}
 
 import scala.collection.JavaConversions._
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Future, blocking}
+import scala.concurrent.ExecutionContext.global
+import scala.concurrent.{ExecutionContext, Future, blocking}
 
 
-private[amqp] class RabbitConnection(settings: ConnectionSettings) extends Connection {
-  val factory = Conversions.toConnectionFactory(settings)
+private[amqp] class RabbitConnection(
+    settings: ConnectionSettings,
+    executor: Option[ExecutorService]) extends Connection {
+
+  implicit val executionContext =
+    executor map ExecutionContext.fromExecutorService getOrElse global
+  val factory = Conversions.toConnectionFactory(settings, executor)
   val addresses: Array[Address] = settings.addresses.map(address ⇒
     new Address(address.host, address.port))(collection.breakOut)
 
@@ -113,12 +119,12 @@ private[amqp] class RabbitConnection(settings: ConnectionSettings) extends Conne
       Conversions.toExchangeArguments(exchange)))
 
   override def consume(queue: String, prefetch: Int) =
-    new QueuePublisher(underlying, queue, prefetch)
+    new QueuePublisher(underlying, queue, prefetch, executionContext)
 
   override def publish(exchange: String, routingKey: String) =
     new Subscriber[Message] {
       val channel = underlying.createChannel()
-      val delegate = new ExchangeSubscriber(channel, exchange)
+      val delegate = new ExchangeSubscriber(channel, exchange, executionContext)
 
       override def onError(t: Throwable) = delegate.onError(t)
       override def onSubscribe(s: Subscription) = delegate.onSubscribe(s)
@@ -135,7 +141,9 @@ private[amqp] class RabbitConnection(settings: ConnectionSettings) extends Conne
   override def publish(exchange: String) =
     new ExchangeSubscriber(
       channel = underlying.createChannel(),
-      exchange = exchange)
+      exchange = exchange,
+      executionContext = executionContext
+    )
 
   override def publishDirectly(queue: String) =
     publish(exchange = "",

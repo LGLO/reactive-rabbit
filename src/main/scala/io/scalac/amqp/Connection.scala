@@ -1,7 +1,9 @@
 package io.scalac.amqp
 
+import java.util.concurrent.ExecutorService
+
 import com.typesafe.config.{Config, ConfigFactory}
-import io.scalac.amqp.impl.RabbitConnection
+import io.scalac.amqp.impl.{ConfigToExecutorService, RabbitConnection}
 import org.reactivestreams.{Publisher, Subscriber}
 
 import scala.concurrent.Future
@@ -12,10 +14,12 @@ object Connection {
     apply(ConfigFactory.load())
 
   def apply(config: Config): Connection =
-    apply(ConnectionSettings(config))
+    apply(ConnectionSettings(config), executorService(config))
 
-  def apply(settings: ConnectionSettings): Connection =
-    new RabbitConnection(settings)
+  def apply(settings: ConnectionSettings, executor: Option[ExecutorService] = None): Connection =
+    new RabbitConnection(settings, executor)
+  
+  def executorService(config: Config): Option[ExecutorService] = ConfigToExecutorService(config)
 }
 
 

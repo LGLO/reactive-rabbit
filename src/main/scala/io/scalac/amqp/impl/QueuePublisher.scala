@@ -4,6 +4,7 @@ import com.rabbitmq.client.{Connection, ShutdownListener, ShutdownSignalExceptio
 import io.scalac.amqp.Delivery
 import org.reactivestreams.{Publisher, Subscriber}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.stm.Ref
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
@@ -19,7 +20,11 @@ private[amqp] class QueuePublisher(
   /** Number of unacknowledged messages in the flight. It's beneficial to have this number higher
     * than 1 due to improved throughput. Setting this number to high may increase memory usage -
     * depending on average message size and speed of subscribers. */
-  prefetch: Int = 20) extends Publisher[Delivery] {
+  prefetch: Int = 20,
+
+  /** Execution context for asynchronous delivery of requested Deliveries */
+  executionContext: ExecutionContext  
+  ) extends Publisher[Delivery] {
 
   require(prefetch > 0, "prefetch <= 0")
 
@@ -33,7 +38,7 @@ private[amqp] class QueuePublisher(
         Try(connection.createChannel()) match {
           case Success(channel) ⇒
             channel.addShutdownListener(newShutdownListener(subscriber))
-            val subscription = new QueueSubscription(channel, queue, subscriber)
+            val subscription = new QueueSubscription(channel, queue, subscriber, executionContext)
 
             try {
               subscriber.onSubscribe(subscription)

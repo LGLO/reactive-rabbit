@@ -6,15 +6,15 @@ import io.scalac.amqp.Delivery
 import org.reactivestreams.{Subscriber, Subscription}
 
 import scala.collection.immutable.Queue
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.stm.{Ref, atomic}
 import scala.util.control.NonFatal
 
 
-private[amqp] class QueueSubscription(channel: Channel, queue: String, subscriber: Subscriber[_ >: Delivery])
+private[amqp] class QueueSubscription(channel: Channel, queue: String, subscriber: Subscriber[_ >: Delivery], executionContext: ExecutionContext)
   extends DefaultConsumer(channel) with Subscription {
-
+  
+  implicit val ec = executionContext
   val demand = Ref(0L)
 
   /** Number of messages stored in this buffer is limited by channel QOS. */

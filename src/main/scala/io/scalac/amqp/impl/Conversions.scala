@@ -1,6 +1,6 @@
 package io.scalac.amqp.impl
 
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.{ExecutorService, TimeUnit}
 
 import com.google.common.collect.ImmutableMap
 import com.google.common.net.MediaType
@@ -13,7 +13,7 @@ import scala.concurrent.duration.Duration
 
 
 private object Conversions {
-  def toConnectionFactory(settings: ConnectionSettings): ConnectionFactory = {
+  def toConnectionFactory(settings: ConnectionSettings, executor: Option[ExecutorService]): ConnectionFactory = {
     val factory = new ConnectionFactory()
     factory.setVirtualHost(settings.virtualHost)
     factory.setUsername(settings.username)
@@ -38,6 +38,7 @@ private object Conversions {
     // enable SSL if needed
     for(protocol ← settings.ssl) factory.useSslProtocol(protocol)
 
+    executor foreach factory.setSharedExecutor
     factory
   }
 
