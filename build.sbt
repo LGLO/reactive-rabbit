@@ -32,7 +32,7 @@ libraryDependencies ++= Seq(
   "org.scalatest"            %% "scalatest"                % "2.2.4"   % "test", // for TCK
   "org.reactivestreams"      %  "reactive-streams-tck"     % "1.0.0"   % "test",
   "com.typesafe.akka"        %% "akka-stream-experimental" % "2.0.1"   % "test",
-  "org.monifu"             
+  "org.monifu"               %% "monifu"                   % "1.0"     % "test"
 )
 
 publishMavenStyle := true

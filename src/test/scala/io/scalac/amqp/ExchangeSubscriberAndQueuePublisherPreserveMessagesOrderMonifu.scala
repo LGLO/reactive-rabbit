@@ -22,15 +22,15 @@ class ExchangeSubscriberAndQueuePublisherPreserveMessagesOrderMonifu extends Fla
     val connection = Connection()
     val consConn = Connection()
     val brokerReady = for {
-      e <- connection.exchangeDeclare(Exchange("E", Direct, durable = false, autoDelete = true))
-      q <- connection.queueDeclare(Queue("Q", autoDelete = true))
-      b <- connection.queueBind("Q", "E", "q")
+      e <- connection.exchangeDeclare(Exchange("E2", Direct, durable = false, autoDelete = true))
+      q <- connection.queueDeclare(Queue("Q2", autoDelete = true))
+      b <- connection.queueBind("Q2", "E2", "q")
     } yield b
     Await.result(brokerReady, 10.seconds)
 
     //prefetch > 1 causes delivery to stream not ordered
-    val qPublisher = consConn.consume(queue = "Q", prefetch = prefetch)
-    val eSubscriber = connection.publish(exchange = "E", routingKey = "q")
+    val qPublisher = consConn.consume(queue = "Q2", prefetch = prefetch)
+    val eSubscriber = connection.publish(exchange = "E2", routingKey = "q")
 
     Observable.fromIterator((1 to totalMessages).iterator)
       .map(i => Message(body = BigInt(i).toByteArray))
